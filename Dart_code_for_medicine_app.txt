@@ -1,0 +1,1603 @@
+import 'package:http/http.dart' as http;
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:fl_chart/fl_chart.dart';
+import 'dart:io';
+import 'dart:async';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+  runApp(MyApp());
+}
+
+List<Map<String, dynamic>> prescriptionHistory = [];
+
+class MyApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: LoginScreen(),
+    );
+  }
+}
+
+class LoginScreen extends StatefulWidget {
+  @override
+  _LoginScreenState createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<LoginScreen> {
+
+  String role = "Select Role";
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Login")),
+      body: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+
+            DropdownButton<String>(
+              value: role,
+              isExpanded: true,
+              items: [
+                DropdownMenuItem(value: "Select Role", child: Text("Select Role")),
+                DropdownMenuItem(value: "Doctor", child: Text("Doctor")),
+                DropdownMenuItem(value: "Family Member", child: Text("Family Member")),
+              ],
+              onChanged: (value){
+                setState(() {
+                  role = value!;
+                });
+              },
+            ),
+
+            SizedBox(height:20),
+
+            ElevatedButton(
+              onPressed: () {
+
+                if(role=="Select Role"){
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Please select role")));
+                  return;
+                }
+
+                if(role=="Doctor"){
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:(context)=>PatientScreen(),
+                    ),
+                  );
+
+                } else {
+
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder:(context)=>FamilyHomeScreen(),
+                    ),
+                  );
+
+                }
+
+              },
+              child: Text("Login"),
+            )
+
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class PatientScreen extends StatefulWidget {
+  @override
+  _PatientScreenState createState() => _PatientScreenState();
+}
+
+class _PatientScreenState extends State<PatientScreen> {
+
+  TextEditingController name = TextEditingController();
+  TextEditingController age = TextEditingController();
+  String sex = "Select Sex";
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Patient Details")),
+      body: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+
+            TextField(
+              controller: name,
+              decoration: InputDecoration(labelText: "Patient Name"),
+            ),
+
+            TextField(
+              controller: age,
+              keyboardType: TextInputType.number,
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              decoration: InputDecoration(labelText: "Age"),
+            ),
+
+            DropdownButton<String>(
+              value: sex,
+              isExpanded: true,
+              items: [
+                DropdownMenuItem(value: "Select Sex", child: Text("Select Sex")),
+                DropdownMenuItem(value: "Male", child: Text("Male")),
+                DropdownMenuItem(value: "Female", child: Text("Female")),
+              ],
+              onChanged: (value){
+                setState(() {
+                  sex = value!;
+                });
+              },
+            ),
+
+            SizedBox(height:20),
+
+            ElevatedButton(
+              onPressed: (){
+
+                if(name.text.isEmpty || age.text.isEmpty || sex=="Select Sex"){
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Fill patient details")));
+                  return;
+                }
+
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder:(context)=>DoctorScreen(
+                            patientName:name.text,
+                            age:age.text,
+                            sex:sex
+                        )));
+
+              },
+              child: Text("Next"),
+            )
+
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class DoctorScreen extends StatefulWidget {
+
+  final String patientName;
+  final String age;
+  final String sex;
+
+  DoctorScreen({required this.patientName,required this.age,required this.sex});
+
+  @override
+  _DoctorScreenState createState() => _DoctorScreenState();
+}
+
+class _DoctorScreenState extends State<DoctorScreen> {
+
+  TextEditingController doctor = TextEditingController();
+  TextEditingController hospital = TextEditingController();
+  TextEditingController diagnosis = TextEditingController();
+
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Doctor Details")),
+      body: Padding(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          children: [
+
+            TextField(
+              controller: doctor,
+              decoration: InputDecoration(labelText: "Doctor Name"),
+            ),
+
+            TextField(
+              controller: hospital,
+              decoration: InputDecoration(labelText: "Hospital"),
+            ),
+
+            TextField(
+              controller: diagnosis,
+              decoration: InputDecoration(labelText: "Diagnosis"),
+            ),
+
+            SizedBox(height:20),
+
+            ElevatedButton(
+              onPressed: (){
+
+                if(doctor.text.isEmpty || hospital.text.isEmpty || diagnosis.text.isEmpty){
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Fill doctor details")));
+                  return;
+                }
+
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder:(context)=>MedicineScreen(
+                            patientName:widget.patientName,
+                            age:widget.age,
+                            sex:widget.sex,
+                            doctor:doctor.text,
+                            hospital:hospital.text,
+                            diagnosis:diagnosis.text
+                        )));
+
+              },
+              child: Text("Next"),
+            )
+
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class MedicineScreen extends StatefulWidget {
+
+  final String patientName,age,sex,doctor,hospital,diagnosis;
+
+  MedicineScreen({
+    required this.patientName,
+    required this.age,
+    required this.sex,
+    required this.doctor,
+    required this.hospital,
+    required this.diagnosis
+  });
+
+  @override
+  _MedicineScreenState createState() => _MedicineScreenState();
+}
+
+class _MedicineScreenState extends State<MedicineScreen> {
+
+  List<Map<String,dynamic>> medicines=[];
+  final ImagePicker picker = ImagePicker();
+
+  Future<void> takePhoto(int index) async {
+
+    final XFile? photo = await picker.pickImage(source: ImageSource.camera);
+
+    if(photo!=null){
+      setState(() {
+        medicines[index]["image"] = File(photo.path);
+      });
+    }
+
+  }
+
+  List<String> instructionOptions=[
+    "Before Food",
+    "After Food",
+    "Empty Stomach",
+    "Before Sleep",
+    "After Breakfast",
+    "After Lunch",
+    "After Dinner"
+  ];
+
+  Future<void> pickTime(TextEditingController controller) async {
+
+    TimeOfDay? picked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now()
+    );
+
+    if(picked!=null){
+      controller.text=picked.format(context);
+    }
+  }
+
+  Future<void> pickQuantity(TextEditingController controller) async {
+
+    int selected=5;
+
+    await showModalBottomSheet(
+        context: context,
+        builder:(context){
+
+          return SizedBox(
+            height:250,
+            child:Column(
+              children:[
+
+                Expanded(
+                  child:ListWheelScrollView.useDelegate(
+                    itemExtent:40,
+                    onSelectedItemChanged:(index){
+                      selected=index+1;
+                    },
+                    childDelegate:ListWheelChildBuilderDelegate(
+                        builder:(context,index){
+                          return Center(child:Text("${index+1} ml"));
+                        },
+                        childCount:20
+                    ),
+                  ),
+                ),
+
+                ElevatedButton(
+                    onPressed:(){
+                      controller.text="$selected";
+                      Navigator.pop(context);
+                    },
+                    child:Text("Select")
+                )
+
+              ],
+            ),
+          );
+
+        }
+    );
+  }
+  Future<String> uploadImageToCloudinary(File imageFile) async {
+    final uri = Uri.parse(
+      "https://api.cloudinary.com/v1_1/dzwc3es1n/image/upload",
+    );
+
+    var request = http.MultipartRequest("POST", uri);
+
+    request.fields["upload_preset"] = "medicine_upload";
+    request.files.add(
+      await http.MultipartFile.fromPath("file", imageFile.path),
+    );
+
+    var response = await request.send();
+    var responseData = await response.stream.bytesToString();
+
+    if (response.statusCode == 200) {
+      final regex = RegExp(r'"secure_url":"(.*?)"');
+      final match = regex.firstMatch(responseData);
+
+      if (match != null) {
+        return match.group(1)!.replaceAll(r'\/', '/');
+      } else {
+        throw Exception("Image URL not found in Cloudinary response");
+      }
+    } else {
+      throw Exception("Cloudinary upload failed: $responseData");
+    }
+  }
+
+  void addMedicine() {
+    if (medicines.length >= 3) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Max 3 medicines allowed")),
+      );
+      return;
+    }
+
+    setState(() {
+      medicines.add({
+        "name": TextEditingController(),
+        "type": "Tablet",
+        "quantity": TextEditingController(),
+        "image": null,
+        "timings": [
+          {
+            "time": TextEditingController(),
+            "instruction": "Before Food"
+          }
+        ],
+        "saved": false
+      });
+    });
+  }
+
+  void addTiming(int index){
+
+    setState(() {
+
+      medicines[index]["timings"].add({
+        "time":TextEditingController(),
+        "instruction":"Before Food"
+      });
+
+    });
+
+  }
+
+  void savePrescription() async {
+    try {
+      final database = FirebaseDatabase.instanceFor(
+        app: Firebase.app(),
+        databaseURL:
+        "https://medicine-monitoring-syst-5f393-default-rtdb.asia-southeast1.firebasedatabase.app",
+      );
+
+      List<Map<String, dynamic>> firebaseMedicines = [];
+
+      for (int i = 0; i < medicines.length; i++) {
+        var med = medicines[i];
+
+        String imageUrl = "";
+
+        if (med["image"] != null) {
+          File imageFile = med["image"] as File;
+          imageUrl = await uploadImageToCloudinary(imageFile);
+        }
+
+        firebaseMedicines.add({
+          "name": med["name"].text,
+          "type": med["type"],
+          "quantity": med["quantity"].text,
+          "imageUrl": imageUrl,
+          "trayNumber": i+1,
+          "timings": (med["timings"] as List).map((t) {
+            return {
+              "time": t["time"].text,
+              "instruction": t["instruction"],
+            };
+          }).toList(),
+        });
+      }
+
+      Map<String, dynamic> firebasePrescription = {
+        "patient": widget.patientName,
+        "age": widget.age,
+        "sex": widget.sex,
+        "doctor": widget.doctor,
+        "hospital": widget.hospital,
+        "diagnosis": widget.diagnosis,
+        "date": DateTime.now().toString(),
+        "medicines": firebaseMedicines,
+      };
+
+      DatabaseReference ref = database.ref("prescriptions").push();
+      await ref.set(firebasePrescription);
+      // set latest prescription as active
+      await database.ref("active_prescription/id").set(ref.key);
+      Map<String, dynamic> localPrescription = {
+        "patient": widget.patientName,
+        "age": widget.age,
+        "sex": widget.sex,
+        "doctor": widget.doctor,
+        "hospital": widget.hospital,
+        "diagnosis": widget.diagnosis,
+        "date": DateTime.now().toString(),
+        "medicines": medicines,
+      };
+
+      prescriptionHistory.add(localPrescription);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Prescription saved successfully")),
+      );
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => PreviewScreen(prescription: localPrescription),
+        ),
+      );
+    } catch (e) {
+      print("SAVE PRESCRIPTION ERROR: $e");
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error saving prescription: $e")),
+      );
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+
+    return Scaffold(
+      appBar:AppBar(title:Text("Medicines")),
+      body:ListView(
+        padding:EdgeInsets.all(20),
+        children:[
+
+          ...medicines.asMap().entries.map((entry){
+
+            int i=entry.key;
+            var med=entry.value;
+
+            return Card(
+              child:Padding(
+                padding:EdgeInsets.all(10),
+                child:Column(
+                  children:[
+
+                    TextField(
+                      controller:med["name"],
+                      readOnly:med["saved"],
+                      decoration:InputDecoration(labelText:"Medicine Name"),
+                    ),
+
+                    DropdownButton<String>(
+                      value:med["type"],
+                      isExpanded:true,
+                      onChanged:med["saved"]?null:(value){
+                        setState(() {
+                          med["type"]=value!;
+                        });
+                      },
+                      items:[
+                        DropdownMenuItem(value:"Tablet",child:Text("Tablet")),
+                        DropdownMenuItem(value:"Syrup",child:Text("Syrup"))
+                      ],
+                    ),
+
+                    if(med["type"]=="Syrup")
+                      GestureDetector(
+                        onTap:med["saved"]?null:(){
+                          pickQuantity(med["quantity"]);
+                        },
+                        child:AbsorbPointer(
+                          child:TextField(
+                            controller:med["quantity"],
+                            decoration:InputDecoration(labelText:"Select Quantity (ml)"),
+                          ),
+                        ),
+                      ),
+
+                    ElevatedButton.icon(
+                      onPressed:()=>takePhoto(i),
+                      icon:Icon(Icons.camera_alt),
+                      label:Text("Take Medicine Photo"),
+                    ),
+
+                    if(med["image"]!=null)
+                      Padding(
+                        padding:EdgeInsets.only(top:10),
+                        child:Image.file(
+                          med["image"],
+                          height:120,
+                        ),
+                      ),
+
+                    Column(
+                      children:(med["timings"] as List).map<Widget>((t){
+
+                        return Row(
+                          children:[
+
+                            Expanded(
+                              child:GestureDetector(
+                                onTap:med["saved"]?null:(){
+                                  pickTime(t["time"]);
+                                },
+                                child:AbsorbPointer(
+                                  child:TextField(
+                                    controller:t["time"],
+                                    decoration:InputDecoration(labelText:"Time"),
+                                  ),
+                                ),
+                              ),
+                            ),
+
+                            SizedBox(width:10),
+
+                            Expanded(
+                              child:DropdownButton<String>(
+                                value:t["instruction"],
+                                isExpanded:true,
+                                items:instructionOptions.map((value){
+                                  return DropdownMenuItem(
+                                    value:value,
+                                    child:Text(value),
+                                  );
+                                }).toList(),
+                                onChanged:med["saved"]?null:(v){
+                                  setState(() {
+                                    t["instruction"]=v!;
+                                  });
+                                },
+                              ),
+                            )
+
+                          ],
+                        );
+
+                      }).toList(),
+                    ),
+
+                    TextButton(
+                        onPressed:med["saved"]?null:()=>addTiming(i),
+                        child:Text("Add Timing")
+                    ),
+
+                    Row(
+                      mainAxisAlignment:MainAxisAlignment.spaceEvenly,
+                      children:[
+
+                        ElevatedButton(
+                          onPressed:(){
+                            setState(() {
+                              med["saved"]=true;
+                            });
+                          },
+                          child:Text("Save"),
+                        ),
+
+                        ElevatedButton(
+                          onPressed:(){
+                            setState(() {
+                              med["saved"]=false;
+                            });
+                          },
+                          child:Text("Edit"),
+                        ),
+
+                        ElevatedButton(
+                          onPressed:(){
+                            setState(() {
+                              medicines.removeAt(i);
+                            });
+                          },
+                          child:Text("Delete"),
+                        )
+
+                      ],
+                    )
+
+                  ],
+                ),
+              ),
+            );
+
+          }),
+
+          ElevatedButton(
+            onPressed:addMedicine,
+            child:Text("Add Medicine"),
+          ),
+
+          ElevatedButton(
+            onPressed:savePrescription,
+            child:Text("Final Save"),
+          )
+
+        ],
+      ),
+    );
+  }
+}
+
+class PreviewScreen extends StatelessWidget {
+  final Map<String, dynamic> prescription;
+
+  PreviewScreen({required this.prescription});
+
+  String readValue(dynamic value) {
+    if (value == null) return "";
+    try {
+      // for TextEditingController
+      return value.text.toString();
+    } catch (_) {
+      // for normal String / int / Firebase values
+      return value.toString();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    List meds = prescription["medicines"] ?? [];
+
+    return Scaffold(
+      appBar: AppBar(title: Text("Prescription")),
+      body: Padding(
+        padding: EdgeInsets.all(20),
+        child: ListView(
+          children: [
+            Text(
+              "Patient Details",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text("Name: ${prescription["patient"] ?? ""}"),
+            Text("Age: ${prescription["age"] ?? ""}"),
+            Text("Sex: ${prescription["sex"] ?? ""}"),
+
+            SizedBox(height: 20),
+
+            Text(
+              "Doctor Details",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text("Doctor: ${prescription["doctor"] ?? ""}"),
+            Text("Hospital: ${prescription["hospital"] ?? ""}"),
+            Text("Problem: ${prescription["diagnosis"] ?? ""}"),
+
+            SizedBox(height: 20),
+
+            Text(
+              "Prescription Date",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+            Text("${prescription["date"] ?? ""}"),
+
+            SizedBox(height: 20),
+
+            Text(
+              "Medicines",
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+            ),
+
+            ...meds.map<Widget>((med) {
+              List timings = med["timings"] ?? [];
+
+              String medName = readValue(med["name"]);
+              String medType = readValue(med["type"]);
+              String medQty = readValue(med["quantity"]);
+              String imageUrl = readValue(med["imageUrl"]);
+
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  SizedBox(height: 10),
+
+                  Text(
+                    medName,
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                  ),
+
+                  // Show local image if available
+                  if (med["image"] != null)
+                    Padding(
+                      padding: EdgeInsets.only(top: 5, bottom: 5),
+                      child: Image.file(
+                        med["image"],
+                        height: 120,
+                      ),
+                    ),
+
+                  // Show Firebase/Cloudinary image if available
+                  if (med["image"] == null && imageUrl.isNotEmpty)
+                    Padding(
+                      padding: EdgeInsets.only(top: 5, bottom: 5),
+                      child: Image.network(
+                        imageUrl,
+                        height: 120,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Text("Image not available");
+                        },
+                      ),
+                    ),
+
+                  if (medType == "Syrup")
+                    Text("Quantity: $medQty ml"),
+
+                  ...timings.map<Widget>((t) {
+                    String timeValue = readValue(t["time"]);
+                    String instructionValue = readValue(t["instruction"]);
+                    return Text("$timeValue - $instructionValue");
+                  }).toList(),
+                ],
+              );
+            }).toList(),
+
+            SizedBox(height: 20),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (context) => HistoryScreen()),
+                );
+              },
+              child: Text("View History"),
+            ),
+
+            SizedBox(height: 10),
+
+            ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HealthUpdatesScreen(),
+                  ),
+                );
+              },
+              child: Text("View Health Monitoring"),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+}
+class HistoryScreen extends StatelessWidget {
+  final DatabaseReference ref = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL:
+    "https://medicine-monitoring-syst-5f393-default-rtdb.asia-southeast1.firebasedatabase.app",
+  ).ref("prescriptions");
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Prescription History")),
+      body: FutureBuilder<DatabaseEvent>(
+        future: ref.once(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text("Error loading history"));
+          }
+
+          if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+            return Center(child: Text("No prescription history found"));
+          }
+
+          final data = Map<String, dynamic>.from(
+            snapshot.data!.snapshot.value as Map,
+          );
+
+          final historyList = data.entries.map((entry) {
+            return {
+              "id": entry.key,
+              ...Map<String, dynamic>.from(entry.value),
+            };
+          }).toList();
+
+          historyList.sort((a, b) =>
+              (b["date"] ?? "").toString().compareTo((a["date"] ?? "").toString()));
+
+          return ListView.builder(
+            itemCount: historyList.length,
+            itemBuilder: (context, index) {
+              var p = historyList[index];
+
+              return ListTile(
+                title: Text("${p["doctor"] ?? ""} - ${p["hospital"] ?? ""}"),
+                subtitle: Text("${p["diagnosis"] ?? ""}"),
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => PreviewScreen(prescription: p),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class FamilyHomeScreen extends StatelessWidget {
+
+@override
+Widget build(BuildContext context) {
+
+return Scaffold(
+appBar: AppBar(title: Text("Hello Family Member")),
+
+body: Center(
+child: ElevatedButton(
+
+child: Text("View Patient Prescriptions"),
+
+onPressed: () {
+
+Navigator.push(
+context,
+MaterialPageRoute(
+builder:(context)=>FamilyPrescriptionScreen()
+)
+);
+
+},
+
+),
+),
+);
+}
+}
+class FamilyPrescriptionScreen extends StatelessWidget {
+  final DatabaseReference ref = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL:
+    "https://medicine-monitoring-syst-5f393-default-rtdb.asia-southeast1.firebasedatabase.app",
+  ).ref("prescriptions");
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Prescription History")),
+      body: Column(
+        children: [
+          Expanded(
+            child: FutureBuilder<DatabaseEvent>(
+              future: ref.once(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(child: Text("Error loading history"));
+                }
+
+                if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+                  return Center(child: Text("No prescription history found"));
+                }
+
+                final data = Map<String, dynamic>.from(
+                  snapshot.data!.snapshot.value as Map,
+                );
+
+                final historyList = data.entries.map((entry) {
+                  return {
+                    "id": entry.key,
+                    ...Map<String, dynamic>.from(entry.value),
+                  };
+                }).toList();
+
+                historyList.sort((a, b) =>
+                    (b["date"] ?? "").toString().compareTo((a["date"] ?? "").toString()));
+
+                return ListView.builder(
+                  itemCount: historyList.length,
+                  itemBuilder: (context, index) {
+                    var p = historyList[index];
+
+                    return ListTile(
+                      title: Text("${p["doctor"] ?? ""} - ${p["hospital"] ?? ""}"),
+                      subtitle: Text("${p["diagnosis"] ?? ""}"),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PreviewScreen(prescription: p),
+                          ),
+                        );
+                      },
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+          Padding(
+            padding: EdgeInsets.all(20),
+            child: ElevatedButton(
+              child: Text("Next"),
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => HealthUpdatesScreen(),
+                  ),
+                );
+              },
+            ),
+          )
+        ],
+      ),
+    );
+  }
+}
+class EmergencyHistoryScreen extends StatelessWidget {
+  final DatabaseReference ref = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL:
+    "https://medicine-monitoring-syst-5f393-default-rtdb.asia-southeast1.firebasedatabase.app",
+  ).ref("emergency_logs");
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text("Emergency History")),
+      body: FutureBuilder<DatabaseEvent>(
+        future: ref.once(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text("Error: ${snapshot.error}"));
+          }
+
+          if (!snapshot.hasData || snapshot.data!.snapshot.value == null) {
+            return Center(child: Text("No emergency history found"));
+          }
+
+          final data = Map<String, dynamic>.from(
+            snapshot.data!.snapshot.value as Map,
+          );
+
+          final emergencyList = data.entries.map((entry) {
+            return {
+              "id": entry.key,
+              ...Map<String, dynamic>.from(entry.value as Map),
+            };
+          }).toList();
+
+          return ListView.builder(
+            itemCount: emergencyList.length,
+            itemBuilder: (context, index) {
+              var e = emergencyList[index];
+
+              return Card(
+                margin: EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                child: ListTile(
+                  leading: Icon(Icons.warning, color: Colors.red),
+                  title: Text(e["message"]?.toString() ?? "Emergency Triggered"),
+                  subtitle: Text(
+                    "${e["day"] ?? ""}, ${e["date"] ?? ""} at ${e["time"] ?? ""}",
+                  ),
+                ),
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+class HealthUpdatesScreen extends StatefulWidget {
+  @override
+  _HealthUpdatesScreenState createState() => _HealthUpdatesScreenState();
+}
+
+class _HealthUpdatesScreenState extends State<HealthUpdatesScreen> {
+  final FirebaseDatabase database = FirebaseDatabase.instanceFor(
+    app: Firebase.app(),
+    databaseURL:
+    "https://medicine-monitoring-syst-5f393-default-rtdb.asia-southeast1.firebasedatabase.app",
+  );
+
+  late Timer _refreshTimer;
+  late Future<Map<String, dynamic>> _dashboardFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _dashboardFuture = loadDashboardData();
+
+    _refreshTimer = Timer.periodic(Duration(seconds: 10), (timer) {
+      if (mounted) {
+        setState(() {
+          _dashboardFuture = loadDashboardData();
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _refreshTimer.cancel();
+    super.dispose();
+  }
+
+  Widget sectionTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 20, bottom: 10),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget subTitle(String title) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 12, bottom: 8),
+      child: Text(
+        title,
+        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget infoCard(String title, String value, IconData icon, Color color) {
+    return Card(
+      child: ListTile(
+        leading: Icon(icon, color: color),
+        title: Text(title),
+        trailing: Text(
+          value,
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+      ),
+    );
+  }
+
+  Widget statusCard(String status) {
+    Color color;
+    if (status.toUpperCase() == "CRITICAL") {
+      color = Colors.red;
+    } else if (status.toUpperCase() == "WARNING") {
+      color = Colors.orange;
+    } else {
+      color = Colors.green;
+    }
+
+    return Card(
+      child: ListTile(
+        leading: Icon(Icons.health_and_safety, color: color),
+        title: Text("Current Health Status"),
+        trailing: Text(
+          status,
+          style: TextStyle(
+            color: color,
+            fontWeight: FontWeight.bold,
+            fontSize: 16,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget adherenceGraph(List<BarChartGroupData> data, String title) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            SizedBox(
+              height: 220,
+              child: BarChart(
+                BarChartData(
+                  barGroups: data,
+                  titlesData: FlTitlesData(show: true),
+                ),
+              ),
+            ),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text("Taken ", style: TextStyle(color: Colors.green)),
+                SizedBox(width: 10),
+                Text("Missed", style: TextStyle(color: Colors.red)),
+              ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget lineGraph(
+      List<FlSpot> data,
+      String title,
+      Color color, {
+        double minY = 0,
+        double maxY = 100,
+      }) {
+    return Card(
+      child: Padding(
+        padding: EdgeInsets.all(12),
+        child: Column(
+          children: [
+            Text(title, style: TextStyle(fontWeight: FontWeight.bold)),
+            SizedBox(height: 10),
+            SizedBox(
+              height: 220,
+              child: LineChart(
+                LineChartData(
+                  minX: data.isEmpty ? 0 : data.first.x,
+                  maxX: data.isEmpty ? 1 : data.last.x,
+                  minY: minY,
+                  maxY: maxY,
+                  gridData: FlGridData(show: true),
+                  borderData: FlBorderData(show: true),
+                  titlesData: FlTitlesData(show: true),
+                  lineBarsData: [
+                    LineChartBarData(
+                      spots: data.isEmpty ? [FlSpot(0, minY)] : data,
+                      isCurved: true,
+                      color: color,
+                      barWidth: 3,
+                      dotData: FlDotData(show: true),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  bool isSameDay(DateTime a, DateTime b) {
+    return a.year == b.year && a.month == b.month && a.day == b.day;
+  }
+
+  DateTime? parseSensorTimestamp(Map<String, dynamic> item) {
+    try {
+      if (item["timestamp"] != null) {
+        final raw = item["timestamp"].toString();
+        final parts = raw.split(" ");
+        if (parts.length == 2) {
+          final d = parts[0].split("-");
+          final t = parts[1].split(":");
+          return DateTime(
+            int.parse(d[2]),
+            int.parse(d[1]),
+            int.parse(d[0]),
+            int.parse(t[0]),
+            int.parse(t[1]),
+            int.parse(t[2]),
+          );
+        }
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  List<FlSpot> buildDailyAverageSpots(
+      List<Map<String, dynamic>> logs, String key) {
+    Map<int, List<double>> grouped = {};
+
+    for (var log in logs) {
+      final dt = parseSensorTimestamp(log);
+      final v = double.tryParse(log[key].toString());
+      if (dt != null && v != null) {
+        grouped.putIfAbsent(dt.hour, () => []).add(v);
+      }
+    }
+
+    List<FlSpot> spots = [];
+    final sortedKeys = grouped.keys.toList()..sort();
+
+    for (final hour in sortedKeys) {
+      final values = grouped[hour]!;
+      final avg = values.reduce((a, b) => a + b) / values.length;
+      spots.add(FlSpot(hour.toDouble(), avg));
+    }
+
+    return spots;
+  }
+
+  List<FlSpot> buildWeeklyAverageSpots(
+      List<Map<String, dynamic>> logs, String key) {
+    Map<int, List<double>> grouped = {};
+
+    for (var log in logs) {
+      final dt = parseSensorTimestamp(log);
+      final v = double.tryParse(log[key].toString());
+      if (dt != null && v != null) {
+        grouped.putIfAbsent(dt.weekday, () => []).add(v);
+      }
+    }
+
+    List<FlSpot> spots = [];
+    final sortedKeys = grouped.keys.toList()..sort();
+
+    for (final day in sortedKeys) {
+      final values = grouped[day]!;
+      final avg = values.reduce((a, b) => a + b) / values.length;
+      spots.add(FlSpot(day.toDouble(), avg));
+    }
+
+    return spots;
+  }
+
+  List<FlSpot> buildMonthlyAverageSpots(
+      List<Map<String, dynamic>> logs, String key) {
+    Map<int, List<double>> grouped = {};
+
+    for (var log in logs) {
+      final dt = parseSensorTimestamp(log);
+      final v = double.tryParse(log[key].toString());
+      if (dt != null && v != null) {
+        int weekIndex = ((dt.day - 1) ~/ 7) + 1;
+        grouped.putIfAbsent(weekIndex, () => []).add(v);
+      }
+    }
+
+    List<FlSpot> spots = [];
+    final sortedKeys = grouped.keys.toList()..sort();
+
+    for (final week in sortedKeys) {
+      final values = grouped[week]!;
+      final avg = values.reduce((a, b) => a + b) / values.length;
+      spots.add(FlSpot(week.toDouble(), avg));
+    }
+
+    return spots;
+  }
+
+  Future<Map<String, dynamic>> loadDashboardData() async {
+    final latestHealthRef = database.ref("latest_health");
+    final sensorLogsRef = database.ref("sensor_logs");
+    final adherenceLogsRef = database.ref("adherence_logs");
+
+    final latestHealthEvent = await latestHealthRef.once();
+    final sensorLogsEvent = await sensorLogsRef.once();
+    final adherenceLogsEvent = await adherenceLogsRef.once();
+
+    Map<String, dynamic> latestHealth = {};
+    List<Map<String, dynamic>> sensorLogs = [];
+    List<Map<String, dynamic>> adherenceLogs = [];
+
+    if (latestHealthEvent.snapshot.value != null) {
+      latestHealth = Map<String, dynamic>.from(
+        latestHealthEvent.snapshot.value as Map,
+      );
+    }
+
+    if (sensorLogsEvent.snapshot.value != null) {
+      final data =
+      Map<String, dynamic>.from(sensorLogsEvent.snapshot.value as Map);
+      sensorLogs = data.entries.map((entry) {
+        return {
+          "id": entry.key,
+          ...Map<String, dynamic>.from(entry.value as Map),
+        };
+      }).toList();
+    }
+
+    if (adherenceLogsEvent.snapshot.value != null) {
+      final data =
+      Map<String, dynamic>.from(adherenceLogsEvent.snapshot.value as Map);
+      adherenceLogs = data.entries.map((entry) {
+        return {
+          "id": entry.key,
+          ...Map<String, dynamic>.from(entry.value as Map),
+        };
+      }).toList();
+    }
+
+    sensorLogs.sort((a, b) {
+      final ta = parseSensorTimestamp(a) ?? DateTime(2000);
+      final tb = parseSensorTimestamp(b) ?? DateTime(2000);
+      return ta.compareTo(tb);
+    });
+
+    adherenceLogs.sort((a, b) {
+      final ta = parseSensorTimestamp(a) ?? DateTime(2000);
+      final tb = parseSensorTimestamp(b) ?? DateTime(2000);
+      return ta.compareTo(tb);
+    });
+
+    final now = DateTime.now();
+
+    final dailySensorLogs = sensorLogs.where((log) {
+      final dt = parseSensorTimestamp(log);
+      return dt != null && isSameDay(dt, now);
+    }).toList();
+
+    final weeklySensorLogs = sensorLogs.where((log) {
+      final dt = parseSensorTimestamp(log);
+      return dt != null && now.difference(dt).inDays < 7;
+    }).toList();
+
+    final monthlySensorLogs = sensorLogs.where((log) {
+      final dt = parseSensorTimestamp(log);
+      return dt != null && dt.month == now.month && dt.year == now.year;
+    }).toList();
+
+    int dailyTaken = 0;
+    int dailyMissed = 0;
+    int weeklyTaken = 0;
+    int weeklyMissed = 0;
+    List<int> monthlyTaken = [0, 0, 0, 0];
+    List<int> monthlyMissed = [0, 0, 0, 0];
+
+    for (var log in adherenceLogs) {
+      DateTime? dt = parseSensorTimestamp(log);
+      if (dt == null) continue;
+
+      final status = (log["status"] ?? "").toString().toUpperCase();
+
+      if (isSameDay(dt, now)) {
+        if (status == "TAKEN") dailyTaken++;
+        if (status == "MISSED") dailyMissed++;
+      }
+
+      if (now.difference(dt).inDays < 7) {
+        if (status == "TAKEN") weeklyTaken++;
+        if (status == "MISSED") weeklyMissed++;
+      }
+
+      if (dt.month == now.month && dt.year == now.year) {
+        int weekIndex = ((dt.day - 1) ~/ 7);
+        if (weekIndex > 3) weekIndex = 3;
+
+        if (status == "TAKEN") monthlyTaken[weekIndex]++;
+        if (status == "MISSED") monthlyMissed[weekIndex]++;
+      }
+    }
+
+    final dailyAdherence = [
+      BarChartGroupData(x: 0, barRods: [
+        BarChartRodData(toY: dailyTaken.toDouble(), color: Colors.green),
+        BarChartRodData(toY: dailyMissed.toDouble(), color: Colors.red),
+      ]),
+    ];
+
+    final weeklyAdherence = [
+      BarChartGroupData(x: 0, barRods: [
+        BarChartRodData(toY: weeklyTaken.toDouble(), color: Colors.green),
+        BarChartRodData(toY: weeklyMissed.toDouble(), color: Colors.red),
+      ]),
+    ];
+
+    final monthlyAdherence = List.generate(4, (i) {
+      return BarChartGroupData(x: i, barRods: [
+        BarChartRodData(toY: monthlyTaken[i].toDouble(), color: Colors.green),
+        BarChartRodData(toY: monthlyMissed[i].toDouble(), color: Colors.red),
+      ]);
+    });
+
+    return {
+      "latestHealth": latestHealth,
+      "dailyAdherence": dailyAdherence,
+      "weeklyAdherence": weeklyAdherence,
+      "monthlyAdherence": monthlyAdherence,
+      "dailyTemp": buildDailyAverageSpots(dailySensorLogs, "temperature"),
+      "weeklyTemp": buildWeeklyAverageSpots(weeklySensorLogs, "temperature"),
+      "monthlyTemp": buildMonthlyAverageSpots(monthlySensorLogs, "temperature"),
+      "dailyHr": buildDailyAverageSpots(dailySensorLogs, "heartRate"),
+      "weeklyHr": buildWeeklyAverageSpots(weeklySensorLogs, "heartRate"),
+      "monthlyHr": buildMonthlyAverageSpots(monthlySensorLogs, "heartRate"),
+      "dailySpo2": buildDailyAverageSpots(dailySensorLogs, "spo2"),
+      "weeklySpo2": buildWeeklyAverageSpots(weeklySensorLogs, "spo2"),
+      "monthlySpo2": buildMonthlyAverageSpots(monthlySensorLogs, "spo2"),
+    };
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Text("Health Dashboard"),
+      ),
+      body: FutureBuilder<Map<String, dynamic>>(
+        future: _dashboardFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return Center(child: CircularProgressIndicator());
+          }
+
+          if (snapshot.hasError) {
+            return Center(child: Text("Error loading health data"));
+          }
+
+          if (!snapshot.hasData) {
+            return Center(child: Text("No health data found"));
+          }
+
+          final data = snapshot.data!;
+          final latestHealth =
+              data["latestHealth"] as Map<String, dynamic>? ?? {};
+
+          final temperature =
+              double.tryParse((latestHealth["temperature"] ?? "0").toString()) ??
+                  0.0;
+          final heartRate =
+              int.tryParse((latestHealth["heartRate"] ?? "0").toString()) ?? 0;
+          final spo2 =
+              int.tryParse((latestHealth["spo2"] ?? "0").toString()) ?? 0;
+          final status =
+          (latestHealth["status"] ?? "UNKNOWN").toString();
+
+          final dailyAdherence =
+          data["dailyAdherence"] as List<BarChartGroupData>;
+          final weeklyAdherence =
+          data["weeklyAdherence"] as List<BarChartGroupData>;
+          final monthlyAdherence =
+          data["monthlyAdherence"] as List<BarChartGroupData>;
+
+          final dailyTemp = data["dailyTemp"] as List<FlSpot>;
+          final weeklyTemp = data["weeklyTemp"] as List<FlSpot>;
+          final monthlyTemp = data["monthlyTemp"] as List<FlSpot>;
+
+          final dailyHr = data["dailyHr"] as List<FlSpot>;
+          final weeklyHr = data["weeklyHr"] as List<FlSpot>;
+          final monthlyHr = data["monthlyHr"] as List<FlSpot>;
+
+          final dailySpo2 = data["dailySpo2"] as List<FlSpot>;
+          final weeklySpo2 = data["weeklySpo2"] as List<FlSpot>;
+          final monthlySpo2 = data["monthlySpo2"] as List<FlSpot>;
+
+          return Padding(
+            padding: EdgeInsets.all(16),
+            child: ListView(
+              children: [
+                sectionTitle("Live Health Data"),
+                infoCard("Temperature", "$temperature °C", Icons.thermostat,
+                    Colors.red),
+                infoCard("Heart Rate", "$heartRate bpm", Icons.favorite,
+                    Colors.pink),
+                infoCard("SpO₂", "$spo2 %", Icons.air, Colors.blue),
+                statusCard(status),
+
+                sectionTitle("Medication Adherence"),
+                subTitle("Daily"),
+                adherenceGraph(dailyAdherence, "Daily Taken vs Missed"),
+                subTitle("Weekly"),
+                adherenceGraph(weeklyAdherence, "Weekly Taken vs Missed"),
+                subTitle("Monthly"),
+                adherenceGraph(monthlyAdherence, "Monthly Taken vs Missed"),
+
+                sectionTitle("Temperature Trends"),
+                subTitle("Daily"),
+                lineGraph(dailyTemp, "Daily Temperature", Colors.red,
+                    minY: 20, maxY: 45),
+                subTitle("Weekly"),
+                lineGraph(weeklyTemp, "Weekly Temperature", Colors.orange,
+                    minY: 20, maxY: 45),
+                subTitle("Monthly"),
+                lineGraph(monthlyTemp, "Monthly Temperature", Colors.deepOrange,
+                    minY: 20, maxY: 45),
+
+                sectionTitle("Heart Rate Trends"),
+                subTitle("Daily"),
+                lineGraph(dailyHr, "Daily Heart Rate", Colors.pink,
+                    minY: 40, maxY: 160),
+                subTitle("Weekly"),
+                lineGraph(weeklyHr, "Weekly Heart Rate", Colors.purple,
+                    minY: 40, maxY: 160),
+                subTitle("Monthly"),
+                lineGraph(monthlyHr, "Monthly Heart Rate", Colors.deepPurple,
+                    minY: 40, maxY: 160),
+
+                sectionTitle("SpO₂ Trends"),
+                subTitle("Daily"),
+                lineGraph(dailySpo2, "Daily SpO₂", Colors.blue,
+                    minY: 85, maxY: 100),
+                subTitle("Weekly"),
+                lineGraph(weeklySpo2, "Weekly SpO₂", Colors.indigo,
+                    minY: 85, maxY: 100),
+                subTitle("Monthly"),
+                lineGraph(monthlySpo2, "Monthly SpO₂", Colors.teal,
+                    minY: 85, maxY: 100),
+
+                sectionTitle("Emergency History"),
+                Card(
+                  child: ListTile(
+                    leading: Icon(Icons.warning, color: Colors.red),
+                    title: Text("View Emergency History"),
+                    subtitle: Text(
+                        "Open all emergency cases with day, date and time"),
+                    trailing: Icon(Icons.arrow_forward_ios),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => EmergencyHistoryScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
